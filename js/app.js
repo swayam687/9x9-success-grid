@@ -23,6 +23,7 @@ import {
 let activeTab = "today";
 let goalViewMode = "map";
 let onboardingIndex = 0;
+let lastRenderDate = todayISO();
 
 /* ============================================================
    RENDER
@@ -57,6 +58,7 @@ function render(){
   document.title = s.meta.title || "Success Grid";
   renderTabs();
   renderView();
+  lastRenderDate = todayISO();
 }
 
 function refresh(){
@@ -860,9 +862,22 @@ window.addEventListener("popstate", () => {
    FLUSH PENDING SAVES ON EXIT
    ============================================================ */
 window.addEventListener("beforeunload", saveStateNow);
+
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") saveStateNow();
+  if (document.visibilityState === "hidden") {
+    saveStateNow();
+    return;
+  }
+  // App resumed from background — refresh if the calendar day changed
+  if (!isModalOpen() && todayISO() !== lastRenderDate) {
+    render();
+  }
 });
+
+// Detect midnight rollover while the app stays open and visible
+setInterval(() => {
+  if (todayISO() !== lastRenderDate && !isModalOpen()) render();
+}, 30000);
 
 /* ============================================================
    BOOT
