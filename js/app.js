@@ -1,6 +1,6 @@
 import { $, $$, esc, clamp, todayISO, uid, toast, vibrate } from "./utils.js";
 import {
-  getState, setState, loadState, saveState, saveStateNow, defaultState, normalize,
+  getState, setState, loadState, saveState, saveStateNow, setOnSave, defaultState, normalize,
   findGoal, effectiveProgress, pillarProgress, nextSubtaskFor, logActivity,
   DEFAULT_MAIN_GOAL, DEFAULT_TEMPLATES, DSA_TOPICS
 } from "./state.js";
@@ -16,12 +16,15 @@ import {
   openThemePicker, openCustomize, openAI, buildPrompt, openComingSoon,
   wsExerciseRow
 } from "./modals.js";
-
 import { isSupabaseConfigured } from "./supabase.js";
 import {
   getSession, setCachedUser, signInWithGoogle, signOut, onAuthChange
 } from "./auth.js";
+import { pullAndReplaceLocal, pushNow, schedulePush, onSyncChange } from "./sync.js";
 
+/* ============================================================
+   APP STATE (view-local)
+   ============================================================ */
 /* ============================================================
    APP STATE (view-local)
    ============================================================ */
@@ -58,19 +61,37 @@ function renderView(){
 async function initAuth(){
   if (!isSupabaseConfigured) return;
 
+  // Every save triggers a debounced cloud push (only fires when signed in)
+  setOnSave(schedulePush);
+
   try {
     const session = await getSession();
     setCachedUser(session?.user ?? null);
+    if (session?.user){
+      await pullAndReplaceLocal();
+      render();
+    }
   } catch(e){
     console.warn("Auth init failed", e);
   }
 
-  onAuthChange((event) => {
-    if (activeTab === "more" && !isModalOpen()) {
-      renderView();
+  onAuthChange(async (event) => {
+    if (activeTab === "more" && !isModalOpen()) renderView();
+
+    if (event === "SIGNED_IN"){
+      toast("Signed in");
+      await pullAndReplaceLocal();
+      render();
     }
-    if (event === "SIGNED_IN") toast("Signed in");
-    if (event === "SIGNED_OUT") toast("Signed out");
+
+    if (event === "SIGNED_OUT"){
+      toast("Signed out");
+      render();
+    }
+  });
+
+  onSyncChange((status) => {
+    if (activeTab === "more" && !isModalOpen()) renderView();
   });
 }
 
@@ -228,6 +249,13 @@ document.addEventListener("click", e => {
           console.error(e);
           toast("Sign-out failed");
         });
+      break;
+
+    case "sync-now":
+      pushNow().then(() => {
+        if (activeTab === "more" && !isModalOpen()) renderView();
+        toast("Synced");
+      });
       break;
 
     case "open-goal": e.stopPropagation(); openGoal(id, { focus:true }); break;

@@ -195,6 +195,11 @@ export function loadState(){
   } catch(e){ _state = null; }
 }
 let _saveTimer = null;
+let _onSave = null;
+
+export function setOnSave(cb){
+  _onSave = cb;
+}
 
 export function saveState(){
   if (_saveTimer) clearTimeout(_saveTimer);
@@ -210,8 +215,12 @@ export function saveStateNow(){
 }
 
 function flushSave(){
-  try { localStorage.setItem(KEY, JSON.stringify(_state)); }
-  catch(e){ console.warn("Save failed", e); }
+  try {
+    localStorage.setItem(KEY, JSON.stringify(_state));
+    if (typeof _onSave === "function") _onSave();
+  } catch(e){
+    console.warn("Save failed", e);
+  }
 }
 
 export function findGoal(id){

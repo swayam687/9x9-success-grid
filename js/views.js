@@ -7,6 +7,8 @@ import {
   PILLAR_COLORS
 } from "./state.js";
 import { isAuthAvailable, getCachedUser } from "./auth.js";
+import { getSyncStatus } from "./sync.js";
+
 
 const LOCAL_ORDER = [[0,0],[0,1],[0,2],[1,0],[1,2],[2,0],[2,1],[2,2]];
 const BLOCK_ORDER = [[0,0],[0,1],[0,2],[1,0],[1,2],[2,0],[2,1],[2,2]];
@@ -326,6 +328,24 @@ function renderAuthSection() {
   const user = getCachedUser();
 
   if (user) {
+    let statusText = "Connected";
+    let statusColor = "var(--green-ink)";
+    try {
+      const status = getSyncStatus();
+      if (status === "syncing") {
+        statusText = "Syncing…";
+        statusColor = "var(--amber-ink)";
+      } else if (status === "synced") {
+        statusText = "Synced";
+        statusColor = "var(--green-ink)";
+      } else if (status === "error") {
+        statusText = "Sync error";
+        statusColor = "var(--red-ink)";
+      } else {
+        statusText = "Connected";
+      }
+    } catch(e){ /* sync module not loaded */ }
+
     return `
       <div class="more-group-label">ACCOUNT</div>
       <div class="more-list" style="margin-bottom:16px">
@@ -333,10 +353,13 @@ function renderAuthSection() {
           <span class="lbl">
             <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
               <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(user.email || "Signed in")}</span>
-              <span class="tiny muted">Connected</span>
+              <span class="tiny" style="color:${statusColor}">${statusText}</span>
             </span>
           </span>
         </div>
+        <button class="more-item" data-action="sync-now">
+          <span class="lbl">Sync now</span>
+        </button>
         <button class="more-item danger" data-action="sign-out">
           <span class="lbl">Sign out</span>
         </button>
@@ -354,7 +377,6 @@ function renderAuthSection() {
     </div>
   `;
 }
-
 
 /* ============================================================
    MORE
