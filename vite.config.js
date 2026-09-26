@@ -3,7 +3,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig(({ command }) => ({
   // Dev server at /, production at /9x9-success-grid/ (GitHub Pages subpath)
-  base: command === "build" ? "/9x9-success-grid/" : "/",
+  base: process.env.VITE_BASE ?? "/",
 
   build: {
     outDir: "dist",
