@@ -42,3 +42,6 @@ dist/
 # Vite build output
 dist/
 dev-dist/
+# Local env
+.env.local
+.env*.local

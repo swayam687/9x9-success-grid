@@ -17,6 +17,11 @@ import {
   wsExerciseRow
 } from "./modals.js";
 
+import { isSupabaseConfigured } from "./supabase.js";
+import {
+  getSession, setCachedUser, signInWithGoogle, signOut, onAuthChange
+} from "./auth.js";
+
 /* ============================================================
    APP STATE (view-local)
    ============================================================ */
@@ -48,6 +53,25 @@ function renderView(){
   else if (activeTab === "dsa") v.innerHTML = renderDsa(s);
   else if (activeTab === "workouts") v.innerHTML = renderWorkouts(s);
   else if (activeTab === "weight") v.innerHTML = renderWeight(s);
+}
+
+async function initAuth(){
+  if (!isSupabaseConfigured) return;
+
+  try {
+    const session = await getSession();
+    setCachedUser(session?.user ?? null);
+  } catch(e){
+    console.warn("Auth init failed", e);
+  }
+
+  onAuthChange((event) => {
+    if (activeTab === "more" && !isModalOpen()) {
+      renderView();
+    }
+    if (event === "SIGNED_IN") toast("Signed in");
+    if (event === "SIGNED_OUT") toast("Signed out");
+  });
 }
 
 function render(){
@@ -187,7 +211,24 @@ document.addEventListener("click", e => {
   switch (action){
     case "goto-tab": activeTab = id; render(); break;
 
-    case "close-modal": closeModal(); break;
+        case "close-modal": closeModal(); break;
+
+    case "sign-in":
+      signInWithGoogle().catch(e => {
+        console.error(e);
+        toast("Sign-in failed");
+      });
+      break;
+
+    case "sign-out":
+      if (!confirm("Sign out of Google?")) break;
+      signOut()
+        .then(() => renderView())
+        .catch(e => {
+          console.error(e);
+          toast("Sign-out failed");
+        });
+      break;
 
     case "open-goal": e.stopPropagation(); openGoal(id, { focus:true }); break;
     case "open-pillar": e.stopPropagation(); openPillar(id); break;
@@ -893,10 +934,16 @@ document.getElementById("tabbar").addEventListener("click", e => {
   render();
 });
 
-loadState();
-if (!getState() || !getState().user?.onboarded){
-  showOnboarding();
-} else {
-  $("#app").hidden = false;
-  render();
+async function boot(){
+  loadState();
+  await initAuth();
+
+  if (!getState() || !getState().user?.onboarded){
+    showOnboarding();
+  } else {
+    $("#app").hidden = false;
+    render();
+  }
 }
+
+boot();

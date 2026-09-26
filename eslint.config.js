@@ -25,7 +25,14 @@ export default [
       "eqeqeq": ["warn", "smart"]
     }
   },
-
+  {
+    files: ["vite.config.js", "vitest.config.js", "eslint.config.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: { ...globals.node }
+    }
+  },
   {
     files: ["test/**/*.js"],
     languageOptions: {

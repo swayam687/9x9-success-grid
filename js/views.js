@@ -6,6 +6,7 @@ import {
   workoutStats, weightStats, DEFAULT_TEMPLATES, DSA_TOPICS,
   PILLAR_COLORS
 } from "./state.js";
+import { isAuthAvailable, getCachedUser } from "./auth.js";
 
 const LOCAL_ORDER = [[0,0],[0,1],[0,2],[1,0],[1,2],[2,0],[2,1],[2,2]];
 const BLOCK_ORDER = [[0,0],[0,1],[0,2],[1,0],[1,2],[2,0],[2,1],[2,2]];
@@ -317,9 +318,49 @@ function renderHeatmap(s){
   return `<div class="heat">${cells.join("")}</div>`;
 }
 
+
+
+function renderAuthSection() {
+  if (!isAuthAvailable()) return "";
+
+  const user = getCachedUser();
+
+  if (user) {
+    return `
+      <div class="more-group-label">ACCOUNT</div>
+      <div class="more-list" style="margin-bottom:16px">
+        <div class="more-item" style="cursor:default">
+          <span class="lbl">
+            <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+              <span style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(user.email || "Signed in")}</span>
+              <span class="tiny muted">Connected</span>
+            </span>
+          </span>
+        </div>
+        <button class="more-item danger" data-action="sign-out">
+          <span class="lbl">Sign out</span>
+        </button>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="more-group-label">ACCOUNT</div>
+    <div class="more-list" style="margin-bottom:16px">
+      <button class="more-item" data-action="sign-in">
+        <span class="lbl">Sign in with Google</span>
+        <span class="cnt">Sync across devices <span class="muted">›</span></span>
+      </button>
+    </div>
+  `;
+}
+
+
 /* ============================================================
    MORE
    ============================================================ */
+
+
 export function renderMore(s){
   const goalType = s.user?.goalType || "career";
   const totals = appTotals();
@@ -327,9 +368,12 @@ export function renderMore(s){
   const wt = workoutStats();
   const w = weightStats();
   return `
-  <h2 style="margin-bottom:16px; font-size:20px; font-weight:700; letter-spacing:-.02em">More</h2>
+  <h2 style="margin-bottom:16px; font-size:20px; font-weight:800">More</h2>
 
-  <div class="more-group-label">Your tools</div>
+  ${renderAuthSection()}
+
+  <div class="more-group-label">YOUR TOOLS</div>
+  
   <div class="more-list" style="margin-bottom:16px">
     <button class="more-item" data-action="open-projects">
       <span class="lbl">${icons.folder}Projects</span>

@@ -1,8 +1,7 @@
-import { defineConfig } from "vite";
+﻿import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig(({ command }) => ({
-  // Dev server at /, production at /9x9-success-grid/ (GitHub Pages subpath)
+export default defineConfig({
   base: process.env.VITE_BASE ?? "/",
 
   build: {
@@ -19,7 +18,7 @@ export default defineConfig(({ command }) => ({
       manifest: {
         name: "Success Grid",
         short_name: "Grid",
-        description: "A 9×9 grid goal tracker. Turn any goal into a plan.",
+        description: "A 9x9 grid goal tracker. Turn any goal into a plan.",
         theme_color: "#0a0a0a",
         background_color: "#0a0a0a",
         display: "standalone",
@@ -45,4 +44,4 @@ export default defineConfig(({ command }) => ({
       devOptions: { enabled: false }
     })
   ]
-}));
+});
