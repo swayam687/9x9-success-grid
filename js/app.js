@@ -1,6 +1,6 @@
 import { $, $$, esc, clamp, todayISO, uid, toast, vibrate } from "./utils.js";
 import {
-  getState, setState, loadState, saveState, defaultState, normalize,
+  getState, setState, loadState, saveState, saveStateNow, defaultState, normalize,
   findGoal, effectiveProgress, pillarProgress, nextSubtaskFor, logActivity,
   DEFAULT_MAIN_GOAL, DEFAULT_TEMPLATES, DSA_TOPICS
 } from "./state.js";
@@ -854,6 +854,14 @@ document.addEventListener("keydown", e => {
 
 window.addEventListener("popstate", () => {
   if (isModalOpen()) closeModal(false);
+});
+
+/* ============================================================
+   FLUSH PENDING SAVES ON EXIT
+   ============================================================ */
+window.addEventListener("beforeunload", saveStateNow);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") saveStateNow();
 });
 
 /* ============================================================

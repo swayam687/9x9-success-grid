@@ -194,7 +194,22 @@ export function loadState(){
     _state = null;
   } catch(e){ _state = null; }
 }
+let _saveTimer = null;
+
 export function saveState(){
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(flushSave, 250);
+}
+
+export function saveStateNow(){
+  if (_saveTimer){
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+  }
+  flushSave();
+}
+
+function flushSave(){
   try { localStorage.setItem(KEY, JSON.stringify(_state)); }
   catch(e){ console.warn("Save failed", e); }
 }

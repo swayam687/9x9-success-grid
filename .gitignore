@@ -38,3 +38,7 @@ dist/
 
 # Editor
 *.tsbuildinfo
+
+# Vite build output
+dist/
+dev-dist/
