@@ -680,6 +680,112 @@ document.addEventListener("click", e => {
   }
 });
 
+/* ============================================================
+   SWIPE NAVIGATION — swipe between bottom-nav tabs
+   ------------------------------------------------------------
+   - Finger right→left (dx < 0) : advance to the next tab
+     (today → grid → plan → track → more)
+   - Finger left→right (dx > 0) : go back one tab
+     (more → track → plan → grid → today)
+   - Ignores: inputs/textareas/selects/contenteditable,
+     open drawers/modals, onboarding, and horizontally
+     scrollable surfaces (e.g., the heat map).
+   - At the ends of the tab strip the swipe is a no-op.
+   ============================================================ */
+const TAB_ORDER = ["today", "grid", "plan", "track", "more"];
+
+// dsa / workouts / weight are sub-views under the "more" tab
+function currentMainTab(){
+  return ["dsa", "workouts", "weight"].includes(activeTab) ? "more" : activeTab;
+}
+
+function animateTabSlide(direction){
+  const v = document.getElementById("view");
+  if (!v) return;
+  const cls = direction > 0 ? "tab-slide-from-right" : "tab-slide-from-left";
+  v.classList.remove("tab-slide-from-right", "tab-slide-from-left");
+  // Force reflow so re-adding the class restarts the keyframe.
+  void v.offsetWidth;
+  v.classList.add(cls);
+  const onEnd = () => {
+    v.classList.remove(cls);
+    v.removeEventListener("animationend", onEnd);
+  };
+  v.addEventListener("animationend", onEnd);
+}
+
+function goToAdjacentTab(direction){
+  const idx = TAB_ORDER.indexOf(currentMainTab());
+  if (idx === -1) return;
+  const nextIdx = idx + direction;
+  if (nextIdx < 0 || nextIdx >= TAB_ORDER.length) return;
+  activeTab = TAB_ORDER[nextIdx];
+  render();
+  animateTabSlide(direction);
+}
+
+function elementAllowsSwipe(el){
+  if (!el || !el.closest) return false;
+  // Don't hijack typing / range / select interactions.
+  if (el.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']")) return false;
+  // Don't hijack modals, drawers or onboarding.
+  if (el.closest(".drawer, .modal-root, .onb")) return false;
+  // Don't hijack horizontally-scrollable surfaces (e.g., the heat map).
+  let cur = el;
+  while (cur && cur !== document.body){
+    const st = getComputedStyle(cur);
+    if ((st.overflowX === "auto" || st.overflowX === "scroll") && cur.scrollWidth > cur.clientWidth){
+      return false;
+    }
+    cur = cur.parentElement;
+  }
+  return true;
+}
+
+const SWIPE_MIN_X = 60;         // minimum horizontal travel (px)
+const SWIPE_MAX_OFF_AXIS = 60;  // maximum vertical drift (px)
+const SWIPE_MAX_TIME = 800;     // must complete within this many ms
+let _swipeTracking = false;
+let _swipeStartX = 0;
+let _swipeStartY = 0;
+let _swipeStartTime = 0;
+
+document.addEventListener("touchstart", e => {
+  _swipeTracking = false;
+  const s = getState();
+  if (!s || !s.user?.onboarded) return;
+  if (isModalOpen()) return;
+  const app = document.getElementById("app");
+  if (!app || app.hidden) return;
+  if (e.touches.length !== 1) return;
+  const t = e.touches[0];
+  if (!elementAllowsSwipe(t.target)) return;
+  _swipeStartX = t.clientX;
+  _swipeStartY = t.clientY;
+  _swipeStartTime = Date.now();
+  _swipeTracking = true;
+}, { passive: true });
+
+document.addEventListener("touchend", e => {
+  if (!_swipeTracking) return;
+  _swipeTracking = false;
+  if (isModalOpen()) return;
+  const t = e.changedTouches[0];
+  if (!t) return;
+  const dx = t.clientX - _swipeStartX;
+  const dy = t.clientY - _swipeStartY;
+  const dt = Date.now() - _swipeStartTime;
+  if (dt > SWIPE_MAX_TIME) return;
+  if (Math.abs(dx) < SWIPE_MIN_X) return;
+  if (Math.abs(dy) > SWIPE_MAX_OFF_AXIS) return;
+  if (Math.abs(dx) < Math.abs(dy) * 1.2) return;
+  // dx < 0 : finger moved right→left → next tab
+  // dx > 0 : finger moved left→right → previous tab
+  goToAdjacentTab(dx < 0 ? 1 : -1);
+}, { passive: true });
+
+document.addEventListener("touchcancel", () => { _swipeTracking = false; });
+
 function readExerciseRows(containerSel){
   const rows = document.querySelectorAll(`${containerSel} [data-ws-row]`);
   const out = [];

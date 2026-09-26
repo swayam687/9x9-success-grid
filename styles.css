@@ -658,3 +658,33 @@ h1,h2,h3,h4{ letter-spacing:-.022em; font-weight:600; }
 /* --- Soften shadows to borders-only on cards --- */
 .card, .proj, .tl-month, .wk-cat, .nextup, .budget,
 .mini-grid, .track-hero, .wt-hero, .dsa-topic{ box-shadow:none; }
+
+/* ============================================================
+   SWIPE NAVIGATION — tab slide transitions
+   ------------------------------------------------------------
+   Applied by goToAdjacentTab() in js/app.js on the #view
+   element after render(). The class is auto-removed on
+   animationend so it can be re-added for the next swipe.
+   ============================================================ */
+#view.tab-slide-from-right{
+  animation: tabSlideFromRight var(--dur-slow, 320ms) var(--ease, cubic-bezier(.32,.72,0,1)) both;
+}
+#view.tab-slide-from-left{
+  animation: tabSlideFromLeft var(--dur-slow, 320ms) var(--ease, cubic-bezier(.32,.72,0,1)) both;
+}
+
+@keyframes tabSlideFromRight{
+  from { opacity:0; transform: translateX(28px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+@keyframes tabSlideFromLeft{
+  from { opacity:0; transform: translateX(-28px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  #view.tab-slide-from-right,
+  #view.tab-slide-from-left{
+    animation: none !important;
+  }
+}
