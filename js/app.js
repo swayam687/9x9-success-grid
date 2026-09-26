@@ -215,9 +215,9 @@ document.addEventListener("click", e => {
       const pillarDone = pillar && checkPillarCompletion(pillar.id);
 
       refresh();
-      if (pillarDone){ celebrate("huge"); toast("🏆 Pillar complete!"); }
+      if (pillarDone){ celebrate("huge"); toast("Pillar complete"); }
       else if (g.progress >= 100){ celebrate("small"); toast("Goal complete!"); }
-      else { vibrate(10); toast("✓ " + sub.title.slice(0, 30)); }
+      else { vibrate(10); toast(sub.title.slice(0, 40)); }
       break;
     }
 
@@ -445,7 +445,7 @@ document.addEventListener("click", e => {
       toast("Session saved");
       break;
     }
-    case "wt-save": {
+    case "wkt-save": {
       const exercises = readExerciseRows("#wtExercises");
       const id = $("#wtId").value;
       const name = $("#wtName").value.trim() || "Untitled";
@@ -747,7 +747,7 @@ document.addEventListener("input", e => {
     refresh();
     openGoal(gid);
 
-    if (pillarDone){ celebrate("huge"); toast("🏆 Pillar complete!"); }
+    if (pillarDone){ celebrate("huge"); toast("Pillar complete"); }
     else if (g.progress >= 100){ celebrate("small"); toast("Goal complete!"); }
     else vibrate(10);
     return;
@@ -765,7 +765,7 @@ document.addEventListener("input", e => {
     const tl = s.timeline[m];
     if (tl.items.length && tl.items.every(Boolean)){
       celebrate("big");
-      toast("✅ Month complete!");
+       toast("Month complete");
     }
     return;
   }

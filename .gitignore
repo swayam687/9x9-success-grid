@@ -27,3 +27,14 @@ pnpm-debug.log*
 # Build files
 dist/
 build/
+
+# Node tooling
+node_modules/
+coverage/
+.vitest/
+
+# Vite (Tier 2 preview)
+dist/
+
+# Editor
+*.tsbuildinfo

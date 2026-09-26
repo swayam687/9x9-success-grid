@@ -532,3 +532,129 @@ input[type=range]:disabled{opacity:.45;cursor:not-allowed}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;transition-duration:.01ms !important;animation-iteration-count:1 !important}
 }
+
+
+
+
+/* ============================================================
+   POLISH PASS — tokens, type scale, radius, motion, icon sizes
+   ============================================================ */
+
+:root{
+  --font: 'Inter Tight', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* type scale — 5 sizes */
+  --t-xs:12px; --t-sm:13px; --t-md:15px; --t-lg:18px; --t-xl:24px;
+
+  /* radius — 2 + full */
+  --r-sm:8px; --r-md:12px; --r-full:999px;
+
+  /* spacing — 4px grid */
+  --s-1:4px; --s-2:8px; --s-3:12px; --s-4:16px; --s-5:20px; --s-6:24px; --s-8:32px;
+
+  /* motion */
+  --ease:cubic-bezier(.32,.72,0,1);
+  --dur-fast:120ms; --dur:200ms; --dur-slow:320ms;
+}
+:root[data-theme="deep"]{
+  --accent-ink:#8FB4F5; --accent-line:rgba(91,141,239,.28);
+  --green-ink:#5FC28D;  --green-line:rgba(48,164,108,.30);
+  --amber-ink:#E2B44A;  --red-ink:#F07578;
+}
+:root[data-theme="sunset"]{
+  --accent-ink:#FF9377; --accent-line:rgba(255,107,74,.30);
+  --green-ink:#7FE2A0;  --green-line:rgba(74,222,128,.30);
+  --amber-ink:#FCD34D;  --red-ink:#FCA5A5;
+}
+:root[data-theme="neon"]{
+  --accent-ink:#66E2FF; --accent-line:rgba(0,212,255,.30);
+  --green-ink:#66FFB2;  --green-line:rgba(0,255,136,.30);
+  --amber-ink:#FFC95C;  --red-ink:#FF7389;
+}
+
+/* --- Base typography --- */
+html,body{ font-family:var(--font); letter-spacing:-.011em; }
+h1,h2,h3,h4{ letter-spacing:-.022em; font-weight:600; }
+
+/* Snap to type scale */
+.greet h2{ font-size:var(--t-xl); font-weight:700; }
+.grid-head h2, .plan-head h2{ font-size:var(--t-lg); font-weight:600; }
+.card h3, .nextup h3, .more-group-label{
+  font-size:var(--t-xs); font-weight:600;
+  letter-spacing:.06em; text-transform:uppercase; color:var(--text-3);
+}
+.muted, .tiny{ font-size:var(--t-xs); }
+.task .info .t, .tl-item .edit, .subtask span, .more-item{ font-size:var(--t-md); }
+.task .info .s, .tl-count, .tl-focus{ font-size:var(--t-xs); }
+.pill, .chip{ font-size:var(--t-xs); }
+.tab span:last-child{ font-size:11px; font-weight:500; letter-spacing:0; }
+.tl-title{ font-size:var(--t-md); font-weight:600; }
+.track-hero .big{ font-size:32px; font-weight:700; letter-spacing:-.03em; }
+.track-hero .sub{ font-size:var(--t-sm); }
+.dsa-stat .v, .wt-current{ font-weight:700; letter-spacing:-.03em; }
+.onb-slide h1{ font-size:28px; font-weight:700; letter-spacing:-.025em; }
+.onb-slide p, .onb-caption{ font-size:var(--t-md); }
+
+/* --- Radius unification --- */
+.btn, .card, .proj, .tl-month, .wk-cat, .wk-template, .wk-session,
+.dsa-topic, .dsa-problem, .nextup, .budget, .mini-grid, .track-hero,
+.wt-hero, .theme-card, .more-list{ border-radius:var(--r-md); }
+
+.btn.sm, .btn.icon, .chip, .pill, .tag, .seg, .seg button,
+.inp, input, select, textarea, .wk-inline,
+.subtask, .task, .tl-item, .add-tl, .dsa-bar, .wk-bar, .budget .bar,
+.goal, .block, .mg-cell, .theme-card .swatch{ border-radius:var(--r-sm); }
+
+.chip, .pill, .streak{ border-radius:var(--r-full); }
+
+/* --- Icon sizing & alignment --- */
+.tab .ic{ display:block; line-height:0; }
+.tab .ic svg{ width:20px; height:20px; }
+#menuBtn svg{ width:20px; height:20px; display:block; }
+.more-item .lbl{ display:flex; align-items:center; gap:12px; }
+.more-item .lbl svg{ color:var(--text-2); flex:none; }
+.more-item .cnt{ display:flex; align-items:center; gap:4px; }
+.streak svg{ width:16px; height:16px; }
+.btn svg{ display:block; }
+
+/* --- Accent discipline: ink for text, line for borders --- */
+.tab.active{ color:var(--accent-ink); }
+.streak{ color:var(--amber-ink); }
+.pill.ip{ color:var(--accent-ink); border-color:var(--accent-line); }
+.pill.cp{ color:var(--green-ink); border-color:var(--green-line); }
+.pill.nr{ color:var(--amber-ink); }
+.goal.complete{ border-color:var(--green-line); }
+
+/* --- Grid cells: one progress signal, kill % noise --- */
+.block .bpct{ display:none; }
+.goal .gfoot > span:first-child{ display:none; }
+.goal .gbar{ height:2px; opacity:.55; }
+
+/* --- Motion unification --- */
+.btn, .goal, .block, .task, .tl-item, .more-item, .theme-card,
+.tab, .subtask, .add-tl{
+  transition: background var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              color var(--dur) var(--ease),
+              transform var(--dur-fast) var(--ease);
+}
+.goal .gfill, .block .bfill, .dsa-bar i, .wk-bar i, .budget .bar i{
+  transition: width var(--dur-slow) var(--ease),
+              height var(--dur-slow) var(--ease);
+}
+
+/* --- Tab bar / topbar refinement --- */
+.tabbar{ box-shadow:0 -1px 0 var(--border); }
+.tab{ gap:4px; }
+
+/* --- More list refinement --- */
+.more-item{ padding:12px 16px; min-height:52px; font-weight:500; }
+
+/* --- Buttons: calmer weight, subtle hover --- */
+.btn{ font-weight:500; letter-spacing:-.005em; }
+.btn.primary:hover{ filter:brightness(1.06); }
+
+/* --- Soften shadows to borders-only on cards --- */
+.card, .proj, .tl-month, .wk-cat, .nextup, .budget,
+.mini-grid, .track-hero, .wt-hero, .dsa-topic{ box-shadow:none; }

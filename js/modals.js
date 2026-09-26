@@ -105,7 +105,7 @@ export function openGoal(id, opts = {}){
 
   // ← NEW: store goal id on the drawer so input handlers can find it
   const drawer = document.querySelector(".drawer");
-  if (drawer) drawer.dataset.goalId = id;
+  if (drawer instanceof HTMLElement) drawer.dataset.goalId = id;
 
   if (opts.focus) setTimeout(() => $("#newSubtask")?.focus({ preventScroll:true }), 250);
 }
@@ -463,7 +463,7 @@ export function openWeightLog(){
     </div>
     <div class="drawer-foot">
       <button class="btn" data-action="close-modal">Cancel</button>
-      <button class="btn primary" data-action="wt-save">Save</button>
+      <button class="btn primary" data-action="wkt-save">Save</button>
     </div>
   `);
 }

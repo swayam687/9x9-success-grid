@@ -1,4 +1,5 @@
 import { esc, clamp, todayISO, iso, fmtDate } from "./utils.js";
+import { icons } from "./icons.js";
 import {
   effectiveProgress, pillarProgress, stageProgress, readiness,
   streak, todaysBudget, nextUpTasks, appTotals, dsaStats,
@@ -67,13 +68,13 @@ export function renderToday(s){
     }
   }
 
-  return `
+    return `
   <div class="greet">
     <div>
-      <h2>Hi ${esc(name)} 👋</h2>
-      <p>${tasks.length ? `${tasks.length} thing${tasks.length === 1 ? "" : "s"} to move forward today` : "You're all caught up. Beautiful."}</p>
+      <h2>Hi ${esc(name)}</h2>
+      <p>${tasks.length ? `${tasks.length} thing${tasks.length === 1 ? "" : "s"} to move forward today` : "You're all caught up."}</p>
     </div>
-    <div class="streak">🔥 ${st}</div>
+    <div class="streak">${icons.flame}<span>${st}</span></div>
   </div>
 
   <section class="nextup">
@@ -324,60 +325,69 @@ export function renderMore(s){
   const totals = appTotals();
   const dsa = dsaStats();
   const wt = workoutStats();
+  const w = weightStats();
   return `
-  <h2 style="margin-bottom:16px; font-size:20px; font-weight:800">More</h2>
+  <h2 style="margin-bottom:16px; font-size:20px; font-weight:700; letter-spacing:-.02em">More</h2>
 
-  <div class="more-group-label">YOUR TOOLS</div>
+  <div class="more-group-label">Your tools</div>
   <div class="more-list" style="margin-bottom:16px">
     <button class="more-item" data-action="open-projects">
-      <span class="lbl">📁 Projects</span>
-      <span class="cnt">${s.projects.length} <span class="muted">›</span></span>
+      <span class="lbl">${icons.folder}Projects</span>
+      <span class="cnt">${s.projects.length}${icons.chevronRight}</span>
     </button>
     <button class="more-item" data-action="open-apps">
-      <span class="lbl">📨 Applications</span>
-      <span class="cnt">${totals.total} <span class="muted">›</span></span>
+      <span class="lbl">${icons.send}Applications</span>
+      <span class="cnt">${totals.total}${icons.chevronRight}</span>
     </button>
     ${goalType === "career" || goalType === "other" ? `
       <button class="more-item" data-action="open-dsa">
-        <span class="lbl">🧮 DSA Tracker</span>
-        <span class="cnt">${dsa.solved}/${dsa.total} <span class="muted">›</span></span>
+        <span class="lbl">${icons.code}DSA Tracker</span>
+        <span class="cnt">${dsa.solved}/${dsa.total}${icons.chevronRight}</span>
       </button>
     ` : ""}
     ${goalType === "fitness" || goalType === "other" ? `
       <button class="more-item" data-action="open-workouts">
-        <span class="lbl">💪 Workout log</span>
-        <span class="cnt">${wt.thisWeek}/${wt.target} wk <span class="muted">›</span></span>
+        <span class="lbl">${icons.dumbbell}Workout log</span>
+        <span class="cnt">${wt.thisWeek}/${wt.target} wk${icons.chevronRight}</span>
       </button>
       <button class="more-item" data-action="open-weight">
-        <span class="lbl">⚖️ Weight tracker</span>
-        <span class="cnt">${weightStats().current ? weightStats().current + " " + s.weight.unit : "—"} <span class="muted">›</span></span>
+        <span class="lbl">${icons.scale}Weight tracker</span>
+        <span class="cnt">${w.current ? w.current + " " + s.weight.unit : "—"}${icons.chevronRight}</span>
       </button>
     ` : ""}
   </div>
 
-  <div class="more-group-label">SETUP</div>
+  <div class="more-group-label">Setup</div>
   <div class="more-list" style="margin-bottom:16px">
     <button class="more-item" data-action="open-ai">
-      <span class="lbl">✨ AI Prompt helper</span><span class="cnt">›</span>
+      <span class="lbl">${icons.wand}AI Prompt helper</span>
+      <span class="cnt">${icons.chevronRight}</span>
     </button>
     <button class="more-item" data-action="open-theme">
-      <span class="lbl">🎨 Theme</span>
-      <span class="cnt">${s.settings.theme} <span class="muted">›</span></span>
+      <span class="lbl">${icons.palette}Theme</span>
+      <span class="cnt">${s.settings.theme}${icons.chevronRight}</span>
     </button>
     <button class="more-item" data-action="open-customize">
-      <span class="lbl">⚙️ Customize grid</span><span class="cnt">›</span>
+      <span class="lbl">${icons.sliders}Customize grid</span>
+      <span class="cnt">${icons.chevronRight}</span>
     </button>
   </div>
 
-  <div class="more-group-label">DATA</div>
+  <div class="more-group-label">Data</div>
   <div class="more-list" style="margin-bottom:16px">
-    <button class="more-item" data-action="export"><span class="lbl">⬇️ Export JSON</span></button>
-    <button class="more-item" data-action="import"><span class="lbl">⬆️ Import JSON</span></button>
+    <button class="more-item" data-action="export">
+      <span class="lbl">${icons.download}Export JSON</span>
+    </button>
+    <button class="more-item" data-action="import">
+      <span class="lbl">${icons.upload}Import JSON</span>
+    </button>
   </div>
 
-  <div class="more-group-label" style="color:var(--red)">DANGER ZONE</div>
+  <div class="more-group-label" style="color:var(--red)">Danger zone</div>
   <div class="more-list">
-    <button class="more-item danger" data-action="reset"><span class="lbl">⚠️ Reset all data</span></button>
+    <button class="more-item danger" data-action="reset">
+      <span class="lbl">${icons.alert}Reset all data</span>
+    </button>
   </div>
   `;
 }
