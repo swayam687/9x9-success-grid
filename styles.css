@@ -689,3 +689,137 @@ h1,h2,h3,h4{ letter-spacing:-.022em; font-weight:600; }
     animation: none !important;
   }
 }
+
+/* ============================================================
+   MOBILE-FIRST UX UPGRADES
+   ============================================================ */
+
+/* --- A. Bottom Sheet Conversion --- */
+@media (max-width: 639px) {
+  .modal-root {
+    align-items: flex-end;
+  }
+  .drawer {
+    width: 100%;
+    height: 92%;
+    border-radius: 20px 20px 0 0;
+    animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    will-change: transform;
+  }
+  .drawer-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--border-2);
+    border-radius: 2px;
+    margin: 8px auto 4px;
+    cursor: grab;
+    touch-action: none;
+  }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* --- D. Pull-to-Sync Spinner --- */
+.ptr-spinner {
+  position: fixed;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  z-index: 999;
+  transition: top 0.25s var(--ease), opacity 0.2s;
+  opacity: 0;
+}
+.ptr-spinner.active {
+  top: 20px;
+  opacity: 1;
+}
+.ptr-spinner svg {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* --- B. Swipe-to-Action on Task Lists --- */
+.task {
+  touch-action: pan-y;
+  will-change: transform;
+  user-select: none;
+}
+.task.swiping-right {
+  background: var(--green-soft) !important;
+  border-color: var(--green-line) !important;
+}
+.task.swiping-left {
+  background: var(--red-soft) !important;
+  border-color: var(--red) !important;
+}
+
+
+/* ============================================================
+   SKELETON LOADING & EMPTY STATES
+   ============================================================ */
+
+/* --- Skeleton Shimmer --- */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--r-sm);
+  color: transparent !important;
+  pointer-events: none;
+  user-select: none;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* --- Elegant Empty States --- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  background: var(--surface-1);
+  border: 1px dashed var(--border-2);
+  border-radius: var(--r-md);
+  margin: 16px 0;
+}
+.empty-state .empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+  color: var(--text-3);
+}
+.empty-state h3 {
+  font-size: var(--t-md);
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 6px;
+}
+.empty-state p {
+  font-size: var(--t-sm);
+  color: var(--text-3);
+  max-width: 260px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}

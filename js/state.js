@@ -277,6 +277,17 @@ export function todaysBudget(){
   const k = todayISO();
   return { logged: +(s.settings.dailyLogged[k] || 0), target: +(s.settings.dailyBudget || 3) };
 }
+export function checkWeeklyReset() {
+  const s = getState();
+  if (!s.weekly) return false;
+  const currentWeek = mondayOf(new Date());
+  if (s.weekly.weekStart !== currentWeek) {
+    s.weekly.weekStart = currentWeek;
+    s.weekly.logged = {}; // Reset all weekly logged hours
+    return true;
+  }
+  return false;
+}
 export function nextUpTasks(limit=3){
   const s = getState();
   const open = [];

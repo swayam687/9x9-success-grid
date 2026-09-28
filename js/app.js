@@ -2,7 +2,7 @@ import { $, $$, esc, clamp, todayISO, uid, toast, vibrate } from "./utils.js";
 import {
   getState, setState, loadState, saveState, saveStateNow, setOnSave, defaultState, normalize,
   findGoal, effectiveProgress, pillarProgress, nextSubtaskFor, logActivity,
-  DEFAULT_MAIN_GOAL, DEFAULT_TEMPLATES, DSA_TOPICS
+  DEFAULT_MAIN_GOAL, DEFAULT_TEMPLATES, DSA_TOPICS, checkWeeklyReset // <-- Add this import
 } from "./state.js";
 import { applyTheme, celebrate, openModal, closeModal, isModalOpen, THEMES } from "./ui.js";
 import {
@@ -14,7 +14,8 @@ import {
   openApps, openAppModal, openDsaLog, openDsaTargets,
   openWorkoutSession, openWorkoutTemplateEditor, openWeightLog,
   openThemePicker, openCustomize, openAI, buildPrompt, openComingSoon,
-  wsExerciseRow
+  wsExerciseRow,
+  openInputModal, readInputModalValue, getInputModalCallback
 } from "./modals.js";
 import { isSupabaseConfigured } from "./supabase.js";
 import {
@@ -43,6 +44,23 @@ function renderTabs(){
       (["dsa","workouts","weight"].includes(activeTab) && id === "more");
     btn.classList.toggle("active", isActive);
   });
+}
+
+function renderSkeleton() {
+  const v = $("#view");
+  if (!v) return;
+  v.innerHTML = `
+    <div class="greet">
+      <div>
+        <div class="skeleton" style="width:180px;height:26px;margin-bottom:8px"></div>
+        <div class="skeleton" style="width:120px;height:14px"></div>
+      </div>
+      <div class="skeleton" style="width:70px;height:40px;border-radius:var(--r-full)"></div>
+    </div>
+    <div class="skeleton" style="width:100%;height:140px;border-radius:var(--r-md);margin-bottom:16px"></div>
+    <div class="skeleton" style="width:100%;height:100px;border-radius:var(--r-md);margin-bottom:16px"></div>
+    <div class="skeleton" style="width:100%;height:90px;border-radius:var(--r-md);"></div>
+  `;
 }
 
 function renderView(){
@@ -97,6 +115,7 @@ async function initAuth(){
 
 function render(){
   const s = getState();
+  checkWeeklyReset(); // <-- Add this line
   applyTheme(s.settings.theme);
   const le = $("#logoEmoji"); if (le) le.textContent = s.meta.logo || "🎯";
   const at = $("#appTitle"); if (at) at.textContent = s.meta.title || "Success Grid";
@@ -234,6 +253,14 @@ document.addEventListener("click", e => {
 
         case "close-modal": closeModal(); break;
 
+            case "input-modal-save": {
+      const cb = getInputModalCallback();
+      const val = readInputModalValue();
+      closeModal();
+      if (cb) setTimeout(() => cb(val), 150);
+      break;
+    }
+
     case "sign-in":
       signInWithGoogle().catch(e => {
         console.error(e);
@@ -306,13 +333,29 @@ document.addEventListener("click", e => {
       toast(`−${id}h`);
       break;
     }
+
+        case "reset-daily-budget": {
+      const k = todayISO();
+      s.settings.dailyLogged[k] = 0;
+      saveState(); refresh();
+      toast("Today's budget reset");
+      break;
+    }
     case "log-time-edit": {
       const k = todayISO();
       const cur = +s.settings.dailyLogged[k] || 0;
-      const v = prompt("Total hours logged today:", cur);
-      if (v == null) break;
-      s.settings.dailyLogged[k] = Math.max(0, +v || 0);
-      saveState(); refresh();
+      openInputModal("Set Hours", {
+        label: "Total hours logged today",
+        value: String(cur),
+        type: "number",
+        inputMode: "decimal",
+        placeholder: "0"
+      }, (val) => {
+        s.settings.dailyLogged[k] = Math.max(0, +val || 0);
+        saveState();
+        refresh();
+        toast("Updated");
+      });
       break;
     }
 
@@ -323,24 +366,36 @@ document.addEventListener("click", e => {
 
     /* ---------- Plan ---------- */
     case "add-month": {
-      const name = prompt("Month name (e.g. Nov 2026)");
-      if (!name) break;
-      if (s.roadmap.some(r => r.m === name)){ toast("Already exists"); break; }
-      s.roadmap.push({ m:name, focus:"Focus area", items:[] });
-      s.timeline[name] = { items:[] };
-      saveState(); renderView();
+      openInputModal("Add Month", {
+        label: "Month name",
+        placeholder: "e.g. Nov 2026"
+      }, (name) => {
+        if (!name) return;
+        if (s.roadmap.some(r => r.m === name)) { toast("Already exists"); return; }
+        s.roadmap.push({ m: name, focus: "Focus area", items: [] });
+        s.timeline[name] = { items: [] };
+        saveState();
+        renderView();
+        toast("Month added");
+      });
       break;
     }
     case "add-tl-item": {
       const m = el.dataset.month;
       const r = s.roadmap.find(x => x.m === m);
       if (!r) break;
-      const val = prompt("New item:");
-      if (!val) break;
-      r.items.push(val);
-      if (!s.timeline[m]) s.timeline[m] = { items:[] };
-      s.timeline[m].items.push(false);
-      saveState(); renderView();
+      openInputModal("Add Item", {
+        label: `New action for ${m}`,
+        placeholder: "e.g. Ship first prototype"
+      }, (val) => {
+        if (!val) return;
+        r.items.push(val);
+        if (!s.timeline[m]) s.timeline[m] = { items: [] };
+        s.timeline[m].items.push(false);
+        saveState();
+        renderView();
+        toast("Item added");
+      });
       break;
     }
     case "rm-tl-item": {
@@ -356,13 +411,25 @@ document.addEventListener("click", e => {
 
     /* ---------- Track ---------- */
     case "add-wk-cat": {
-      const name = prompt("Category name");
-      if (!name) break;
-      if (s.weekly.targets[name] != null){ toast("Already exists"); break; }
-      const target = +prompt("Weekly target (hours)", "3") || 3;
-      s.weekly.targets[name] = target;
-      s.weekly.logged[name] = 0;
-      saveState(); renderView();
+      openInputModal("New Category", {
+        label: "Category name",
+        placeholder: "e.g. Reading"
+      }, (name) => {
+        if (!name) return;
+        if (s.weekly.targets[name] != null) { toast("Already exists"); return; }
+        openInputModal("Weekly Target", {
+          label: `Target hours for "${name}"`,
+          value: "3",
+          type: "number",
+          inputMode: "decimal"
+        }, (target) => {
+          s.weekly.targets[name] = Math.max(0, +target || 3);
+          s.weekly.logged[name] = 0;
+          saveState();
+          renderView();
+          toast("Category added");
+        });
+      });
       break;
     }
     case "wk-log": {
@@ -719,6 +786,7 @@ function goToAdjacentTab(direction){
   if (idx === -1) return;
   const nextIdx = idx + direction;
   if (nextIdx < 0 || nextIdx >= TAB_ORDER.length) return;
+  vibrate(5); // <--- ADD THIS LINE
   activeTab = TAB_ORDER[nextIdx];
   render();
   animateTabSlide(direction);
@@ -816,15 +884,6 @@ document.addEventListener("input", e => {
   const t = e.target;
   const s = getState();
 
-  // AI prompt fields
-  const aiMap = { aiMainGoal:"mainGoal", aiSkill:"skillLevel", aiTime:"timeAvailable", aiDeadline:"deadline", aiConstraints:"constraints" };
-  if (t.id in aiMap){
-    s.aiPrompt[aiMap[t.id]] = t.value;
-    saveState();
-    const pre = $("#promptPre");
-    if (pre) pre.textContent = buildPrompt(s.aiPrompt);
-    return;
-  }
 
    // ---------- goal sheet inputs ----------
   const drawer = t.closest(".drawer");
@@ -1070,6 +1129,12 @@ document.getElementById("tabbar").addEventListener("click", e => {
 
 async function boot(){
   loadState();
+  
+  // Show skeleton immediately if we have no local state, or if we are signed in
+  if (!getState() || !getState().user?.onboarded) {
+    renderSkeleton();
+  }
+  
   await initAuth();
 
   if (!getState() || !getState().user?.onboarded){
@@ -1079,5 +1144,100 @@ async function boot(){
     render();
   }
 }
+
+/* ============================================================
+   MOBILE-FIRST UX UPGRADES (Swipe-to-Action & Pull-to-Sync)
+   ============================================================ */
+
+// --- B. Swipe-to-Action on Task Lists ---
+let swipeTarget = null, swipeStartX = 0, swipeStartY = 0, swipeDx = 0;
+
+document.addEventListener("touchstart", e => {
+const task = e.target.closest(".task");
+  if (!task) return;
+  swipeTarget = task;
+  swipeStartX = e.touches[0].clientX;
+  swipeStartY = e.touches[0].clientY;
+  swipeDx = 0;
+}, { passive: true });
+
+document.addEventListener("touchmove", e => {
+  if (!swipeTarget) return;
+  const dx = e.touches[0].clientX - swipeStartX;
+  const dy = e.touches[0].clientY - swipeStartY;
+  
+  // If the user is scrolling vertically, abort the swipe
+  if (Math.abs(dy) > Math.abs(dx)) {
+    swipeTarget = null;
+    return;
+  }
+  
+  e.preventDefault(); // Stop horizontal scroll
+  swipeDx = dx;
+  swipeTarget.style.transform = `translateX(${dx}px)`;
+  swipeTarget.style.transition = "none";
+  
+  if (dx > 0) {
+    swipeTarget.classList.add("swiping-right");
+    swipeTarget.classList.remove("swiping-left");
+  } else if (dx < 0) {
+    swipeTarget.classList.add("swiping-left");
+    swipeTarget.classList.remove("swiping-right");
+  }
+}, { passive: false });
+
+document.addEventListener("touchend", () => {
+  if (!swipeTarget) return;
+  const task = swipeTarget;
+  const dx = swipeDx;
+  
+  task.style.transition = "transform 0.2s ease, background 0.2s ease";
+  task.style.transform = "";
+  task.classList.remove("swiping-right", "swiping-left");
+  swipeTarget = null;
+
+  if (dx > 60) {
+    // Swipe Right: Complete task
+    vibrate(10);
+    const btn = task.querySelector("[data-action='quick-check']");
+    if (btn) btn.click();
+  }
+}, { passive: true });
+
+// --- D. Pull-to-Sync (Instead of Pull-to-Refresh) ---
+let ptrStartY = 0, ptrActive = false;
+const spinner = document.getElementById("ptr-spinner");
+
+document.addEventListener("touchstart", e => {
+  if (window.scrollY === 0 && e.touches.length === 1) {
+    ptrStartY = e.touches[0].clientY;
+    ptrActive = true;
+  }
+}, { passive: true });
+
+document.addEventListener("touchmove", e => {
+  if (!ptrActive || !spinner) return;
+  const dy = e.touches[0].clientY - ptrStartY;
+  if (dy > 0) {
+    e.preventDefault(); // Stop native pull-to-refresh
+    const pull = Math.min(dy * 0.5, 80);
+    spinner.style.top = `${-50 + pull}px`;
+    if (dy > 120) {
+      spinner.classList.add("active");
+    }
+  }
+}, { passive: false });
+
+document.addEventListener("touchend", e => {
+  if (!ptrActive || !spinner) return;
+  ptrActive = false;
+  const dy = e.changedTouches[0].clientY - ptrStartY;
+  spinner.style.top = "-50px";
+  
+  if (dy > 120 && spinner.classList.contains("active")) {
+    spinner.classList.remove("active");
+    pushNow().then(() => toast("Synced to cloud"));
+  }
+}, { passive: true });
 
 boot();

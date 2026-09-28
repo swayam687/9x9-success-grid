@@ -4,8 +4,8 @@ import {
   DEFAULT_TEMPLATES, DSA_TOPICS, DSA_DIFFICULTIES, DSA_STATUSES,
   PILLAR_COLORS, STAGE_NAMES
 } from "./state.js";
-import { openModal, closeModal, THEMES, applyTheme } from "./ui.js";
-import { renderDsa, renderWorkouts, renderWeight } from "./views.js";
+import { openModal, closeModal, THEMES, applyTheme, modalFoot } from "./ui.js";
+import { renderDsa, renderWorkouts, renderWeight, renderEmptyState } from "./views.js";
 
 function priLetter(p){ return p === "High" ? "H" : p === "Medium" ? "M" : "L"; }
 function priColor(p){ return p === "High" ? "var(--red)" : p === "Medium" ? "var(--amber)" : "var(--text-3)"; }
@@ -103,7 +103,6 @@ export function openGoal(id, opts = {}){
     </div>
   `, { onClose: opts.onClose });
 
-  // ← NEW: store goal id on the drawer so input handlers can find it
   const drawer = document.querySelector(".drawer");
   if (drawer instanceof HTMLElement) drawer.dataset.goalId = id;
 
@@ -203,7 +202,13 @@ export function openProjects(){
       <div>${(p.stack || "").split(",").map(x => x.trim()).filter(Boolean).map(x => `<span class="tag">${esc(x)}</span>`).join("")}</div>
       <div class="kv"><span>Status <b>${esc(p.status || "")}</b></span><span>Progress <b>${p.progress || 0}%</b></span></div>
     </div>
-  `).join("") : `<div class="empty">No projects yet.</div>`;
+  `).join("") : renderEmptyState(
+    "folder",
+    "No projects yet",
+    "Start building your portfolio by adding your first project.",
+    `<button class="btn primary" data-action="add-project">Add Project</button>`
+  );
+
   openModal(`
     <div class="drawer-head">
       <div><div class="crumb">More</div><h2>Projects</h2></div>
@@ -211,7 +216,7 @@ export function openProjects(){
     </div>
     <div class="drawer-body">
       ${rows}
-      <button class="btn primary block" data-action="add-project" style="margin-top:14px">+ Add project</button>
+      ${s.projects.length ? `<button class="btn primary block" data-action="add-project" style="margin-top:14px">+ Add project</button>` : ""}
     </div>
   `);
 }
@@ -265,7 +270,13 @@ export function openApps(){
       </div>
       <div class="kv"><span>Status <b>${esc(a.status || "")}</b></span><span>${esc(a.date || "")}</span></div>
     </div>
-  `).join("") : `<div class="empty">No applications yet.</div>`;
+  `).join("") : renderEmptyState(
+    "send",
+    "No applications yet",
+    "Track your job applications, interviews, and offers in one place.",
+    `<button class="btn primary" data-action="add-app">Add Application</button>`
+  );
+
   openModal(`
     <div class="drawer-head">
       <div><div class="crumb">More</div><h2>Applications</h2></div>
@@ -273,7 +284,7 @@ export function openApps(){
     </div>
     <div class="drawer-body">
       ${rows}
-      <button class="btn primary block" data-action="add-app" style="margin-top:14px">+ Add application</button>
+      ${s.applications.length ? `<button class="btn primary block" data-action="add-app" style="margin-top:14px">+ Add application</button>` : ""}
     </div>
   `);
 }
@@ -432,7 +443,7 @@ export function openWorkoutTemplateEditor(templateId){
     </div>
     <div class="drawer-foot">
       <button class="btn" data-action="close-modal">Cancel</button>
-      <button class="btn primary" data-action="wt-save">Save</button>
+      <button class="btn primary" data-action="wkt-save">Save</button>
     </div>
   `);
 }
@@ -463,7 +474,7 @@ export function openWeightLog(){
     </div>
     <div class="drawer-foot">
       <button class="btn" data-action="close-modal">Cancel</button>
-      <button class="btn primary" data-action="wkt-save">Save</button>
+      <button class="btn primary" data-action="wt-save">Save</button>
     </div>
   `);
 }
@@ -539,52 +550,50 @@ export function openCustomize(){
 /* ============================================================
    AI PROMPT
    ============================================================ */
-export function openAI(){
-  const s = getState();
-  const p = s.aiPrompt;
-  openModal(`
+export function openAI() {
+  const html = `
     <div class="drawer-head">
-      <div><div class="crumb">Setup</div><h2>Build with AI</h2></div>
-      <button class="x-btn" data-action="close-modal">×</button>
+      <div>
+        <div class="crumb">Setup</div>
+        <h2>Build with AI</h2>
+      </div>
+      <button class="x-btn" data-action="close-modal" aria-label="Close">×</button>
     </div>
+    
     <div class="drawer-body">
-      <p class="tiny muted">Fill in details, copy prompt, paste into ChatGPT/Claude/Gemini, then paste the JSON back here.</p>
-
-      <div class="field"><label class="fl">Main goal</label><input id="aiMainGoal" value="${esc(p.mainGoal || "")}" /></div>
-      <div class="grid2 field">
-        <div><label class="fl">Skill level</label><input id="aiSkill" value="${esc(p.skillLevel || "")}" /></div>
-        <div><label class="fl">Time/day</label><input id="aiTime" value="${esc(p.timeAvailable || "")}" /></div>
-      </div>
-      <div class="grid2 field">
-        <div><label class="fl">Deadline</label><input id="aiDeadline" value="${esc(p.deadline || "")}" /></div>
-        <div><label class="fl">Constraints</label><input id="aiConstraints" value="${esc(p.constraints || "")}" /></div>
+      <div class="note-box" style="margin-bottom:16px; line-height:1.6;">
+        <b>How it works:</b><br>
+        1. Copy the prompt below.<br>
+        2. Paste it into ChatGPT, Claude, or Gemini.<br>
+        3. Fill in the bracketed <code>[FIELDS]</code> in the prompt.<br>
+        4. The AI will reply with a JSON block.<br>
+        5. Paste that JSON into the box at the bottom.
       </div>
 
-      <div style="background:#0a0e14;border:1px solid var(--border-2);border-radius:12px;overflow:hidden;margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--border)">
-          <span style="font-size:11px;font-weight:700;color:var(--text-3);letter-spacing:.04em">YOUR PROMPT</span>
-          <button class="btn sm primary" data-action="copy-prompt">Copy</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <label class="fl" style="margin:0;">Your Prompt</label>
+        <div style="display:flex; gap:6px;">
+          <button class="btn sm" onclick="window.open('https://chatgpt.com', '_blank')">ChatGPT</button>
+          <button class="btn sm" onclick="window.open('https://claude.ai', '_blank')">Claude</button>
+          <button class="btn sm" data-action="copy-prompt">Copy</button>
         </div>
-        <pre id="promptPre" style="margin:0;padding:14px;color:#e6edf3;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow-y:auto">${esc(buildPrompt(p))}</pre>
       </div>
 
-      <div class="field">
-        <label class="fl">Paste JSON reply</label>
-        <textarea id="aiJsonIn" rows="6" placeholder='{ "meta": { ... }, "pillars": [...] }'></textarea>
-      </div>
-      <button class="btn primary block" data-action="import-ai-json">Build my grid</button>
+      <pre id="promptPre" style="background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-sm); padding:12px; font-size:12px; font-family:var(--font-mono); white-space:pre-wrap; max-height:240px; overflow-y:auto; margin-bottom:16px; color:var(--text-2);">${esc(buildPrompt())}</pre>
+
+      <label class="fl" for="aiJsonIn">Paste JSON reply</label>
+      <textarea id="aiJsonIn" class="inp" rows="6" placeholder='{ "meta": { ... }, "pillars": [ ... ] }'></textarea>
     </div>
-  `);
+
+    <div class="drawer-foot">
+      <button class="btn" data-action="close-modal">Cancel</button>
+      <button class="btn primary" data-action="import-ai-json">Build my grid</button>
+    </div>
+  `;
+  openModal(html);
 }
 
-export function buildPrompt(p){
-  const mg = (p.mainGoal || "").trim() || "[your main goal]";
-  const ctx = [
-    p.skillLevel && `- Skill level: ${p.skillLevel}`,
-    p.timeAvailable && `- Time/day: ${p.timeAvailable}`,
-    p.deadline && `- Deadline: ${p.deadline}`,
-    p.constraints && `- Constraints: ${p.constraints}`
-  ].filter(Boolean).join("\n") || "- (fill in your context)";
+export function buildPrompt() {
   return `You are a strategic planning assistant. Build me a 9×9 Success Grid.
 
 CONTEXT:
@@ -596,10 +605,10 @@ CONTEXT:
 - Monthly roadmap with concrete actions.
 
 MY MAIN GOAL:
-${mg}
+[INSERT YOUR MAIN GOAL HERE]
 
 MY CONTEXT:
-${ctx}
+[INSERT YOUR CONTEXT HERE]
 
 FIRST: ask up to 6 clarifying questions. Wait for my reply.
 
@@ -630,4 +639,56 @@ export function openComingSoon(title, blurb){
       <div class="empty" style="padding:40px 20px">${esc(title)} coming soon.<br><br><span class="tiny">${esc(blurb || "")}</span></div>
     </div>
   `);
+}
+
+/* ============================================================
+   GENERIC INPUT MODAL — replaces native prompt()
+   ============================================================ */
+let _inputModalCallback = null;
+
+export function openInputModal(title, opts = {}, onSave) {
+  const value = opts.value ?? "";
+  const html = `
+    <div class="drawer-head">
+      <div>
+        <div class="crumb">${esc(opts.crumb || "Input")}</div>
+        <h2>${esc(title)}</h2>
+      </div>
+      <button class="x-btn" data-action="close-modal" aria-label="Close">×</button>
+    </div>
+    <div class="drawer-body">
+      <div class="field">
+        ${opts.label ? `<label class="fl" for="inputModalField">${esc(opts.label)}</label>` : ""}
+        <input
+          id="inputModalField"
+          class="inp"
+          type="${opts.type || "text"}"
+          inputmode="${opts.inputMode || "text"}"
+          placeholder="${esc(opts.placeholder || "")}"
+          value="${esc(value)}"
+        />
+      </div>
+    </div>
+    ${modalFoot(opts.saveLabel || "Save", "input-modal-save")}
+  `;
+  _inputModalCallback = typeof onSave === "function" ? onSave : null;
+  openModal(html, { onClose: () => { _inputModalCallback = null; } });
+  setTimeout(() => {
+    /** @type {HTMLInputElement | null} */
+    const inp = /** @type {any} */ (document.getElementById("inputModalField"));
+    if (inp) {
+      inp.focus();
+      inp.select();
+    }
+  }, 120);
+}
+
+export function readInputModalValue() {
+  /** @type {HTMLInputElement | null} */
+  const inp = /** @type {any} */ (document.getElementById("inputModalField"));
+  return inp ? inp.value.trim() : "";
+}
+
+export function getInputModalCallback() {
+  return _inputModalCallback;
 }

@@ -1,4 +1,4 @@
-import { esc, clamp, todayISO, iso, fmtDate } from "./utils.js";
+import { esc, clamp, todayISO, iso, fmtDate, greeting } from "./utils.js";
 import { icons } from "./icons.js";
 import {
   effectiveProgress, pillarProgress, stageProgress, readiness,
@@ -22,11 +22,22 @@ function band(p){
 }
 function priLetter(p){ return p === "High" ? "H" : p === "Medium" ? "M" : "L"; }
 
+export function renderEmptyState(iconName, title, subtitle, actionHtml = "") {
+  const iconSvg = icons[iconName] || icons.target;
+  return `
+    <div class="empty-state">
+      <div class="empty-icon">${iconSvg}</div>
+      <h3>${esc(title)}</h3>
+      <p>${esc(subtitle)}</p>
+      ${actionHtml}
+    </div>
+  `;
+}
+
 /* ============================================================
    TODAY
    ============================================================ */
 export function renderToday(s){
-  const name = s.user?.name || "there";
   const st = streak();
   const tasks = nextUpTasks(3);
   const { logged, target } = todaysBudget();
@@ -71,10 +82,10 @@ export function renderToday(s){
     }
   }
 
-    return `
+  return `
   <div class="greet">
     <div>
-      <h2>Hi ${esc(name)}</h2>
+      <h2>${greeting(s.user.name)}</h2>
       <p>${tasks.length ? `${tasks.length} thing${tasks.length === 1 ? "" : "s"} to move forward today` : "You're all caught up."}</p>
     </div>
     <div class="streak">${icons.flame}<span>${st}</span></div>
@@ -87,11 +98,16 @@ export function renderToday(s){
   </section>
 
   <section class="budget">
-    <div class="spread">
-      <h3 style="margin:0">TODAY'S BUDGET</h3>
-      <span class="muted tiny">${logged}h / ${target}h</span>
+    <div class="spread" style="margin-bottom:4px">
+      <h3 style="margin:0; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-3)">Today's Budget</h3>
+      <div style="display:flex; gap:8px; align-items:center">
+        <span class="muted" style="font-size:12px">${logged}h / ${target}h</span>
+        <button class="btn sm ghost" data-action="reset-daily-budget" title="Reset today's logged time">Reset</button>
+      </div>
     </div>
-    <div class="bar"><i class="${pct >= 100 ? "done" : ""}" style="width:${pct}%"></i></div>
+    <div class="bar">
+      <i style="width:${pct}%" class="${pct >= 100 ? 'done' : ''}"></i>
+    </div>
     <div class="quick">
       <button data-action="log-time-minus" data-id="0.5">−0.5h</button>
       <button data-action="log-time" data-id="0.5">+0.5h</button>
@@ -395,7 +411,7 @@ export function renderMore(s){
   ${renderAuthSection()}
 
   <div class="more-group-label">YOUR TOOLS</div>
-  
+
   <div class="more-list" style="margin-bottom:16px">
     <button class="more-item" data-action="open-projects">
       <span class="lbl">${icons.folder}Projects</span>
@@ -463,7 +479,6 @@ export function renderMore(s){
    ============================================================ */
 export function renderDsa(s){
   const stats = dsaStats();
-  const totals = s.dsa.problems.length;
   const targets = Object.values(s.dsa.targets).reduce((a,b) => a+b, 0);
 
   const topicRows = DSA_TOPICS.map(topic => {
@@ -481,20 +496,27 @@ export function renderDsa(s){
   }).join("");
 
   const recent = [...s.dsa.problems].sort((a,b) => b.date.localeCompare(a.date)).slice(0, 10);
-  const recentRows = recent.length ? recent.map(p => `
-    <div class="dsa-problem">
-      <div style="min-width:0; flex:1">
-        <div class="name">${esc(p.name)}</div>
-        <div class="meta">
-          <span>${esc(p.topic)}</span>
-          <span class="diff-pill diff-${p.difficulty}">${p.difficulty}</span>
-          <span>${p.timeMin || 0}m</span>
-          <span>${fmtDate(p.date)}</span>
+  const recentRows = recent.length
+    ? recent.map(p => `
+      <div class="dsa-problem">
+        <div style="min-width:0; flex:1">
+          <div class="name">${esc(p.name)}</div>
+          <div class="meta">
+            <span>${esc(p.topic)}</span>
+            <span class="diff-pill diff-${p.difficulty}">${p.difficulty}</span>
+            <span>${p.timeMin || 0}m</span>
+            <span>${fmtDate(p.date)}</span>
+          </div>
         </div>
+        <button class="rm" data-action="dsa-rm" data-id="${p.id}" aria-label="Delete">×</button>
       </div>
-      <button class="rm" data-action="dsa-rm" data-id="${p.id}" aria-label="Delete">×</button>
-    </div>
-  `).join("") : `<div class="empty" style="padding:20px">No problems logged yet.</div>`;
+    `).join("")
+    : renderEmptyState(
+        "code",
+        "No problems logged",
+        "Log your first practice problem to start tracking progress and streaks.",
+        `<button class="btn primary" data-action="dsa-log">Log Problem</button>`
+      );
 
   return `
   <div class="grid-head">
@@ -543,18 +565,25 @@ export function renderWorkouts(s){
   `).join("");
 
   const recent = [...s.workouts.sessions].sort((a,b) => b.date.localeCompare(a.date)).slice(0, 8);
-  const sessionRows = recent.length ? recent.map(sess => `
-    <div class="wk-session">
-      <div class="head">
-        <div class="name">${esc(sess.name)}</div>
-        <div class="date">${fmtDate(sess.date)}</div>
+  const sessionRows = recent.length
+    ? recent.map(sess => `
+      <div class="wk-session">
+        <div class="head">
+          <div class="name">${esc(sess.name)}</div>
+          <div class="date">${fmtDate(sess.date)}</div>
+        </div>
+        ${sess.exercises.slice(0, 4).map(e => `
+          <div class="ex"><span>${esc(e.name)}</span><span>${e.sets}×${e.reps} · ${e.weight || 0}kg</span></div>
+        `).join("")}
+        ${sess.exercises.length > 4 ? `<div class="ex" style="color:var(--text-3)">+${sess.exercises.length - 4} more</div>` : ""}
       </div>
-      ${sess.exercises.slice(0, 4).map(e => `
-        <div class="ex"><span>${esc(e.name)}</span><span>${e.sets}×${e.reps} · ${e.weight || 0}kg</span></div>
-      `).join("")}
-      ${sess.exercises.length > 4 ? `<div class="ex" style="color:var(--text-3)">+${sess.exercises.length - 4} more</div>` : ""}
-    </div>
-  `).join("") : `<div class="empty" style="padding:20px">No sessions yet.</div>`;
+    `).join("")
+    : renderEmptyState(
+        "dumbbell",
+        "No sessions yet",
+        "Start a quick workout or pick one of the templates above to begin tracking.",
+        `<button class="btn primary" data-action="wk-freeform">Start Freeform Session</button>`
+      );
 
   return `
   <div class="grid-head">
@@ -600,7 +629,6 @@ export function renderWeight(s){
   const sorted = [...stats.entries].sort((a,b) => a.date.localeCompare(b.date));
   const recent = [...sorted].reverse().slice(0, 15);
 
-  // sparkline
   let svg = `<svg class="wt-chart" viewBox="0 0 300 100" preserveAspectRatio="none">`;
   if (sorted.length >= 2){
     const weights = sorted.map(e => +e.weight);
@@ -613,9 +641,6 @@ export function renderWeight(s){
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     }).join(" ");
     svg += `<polyline points="${points}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
-    // fill gradient
-    const first = sorted[0];
-    const last = sorted[sorted.length - 1];
     const fillPoints = `${points} 300,100 0,100`;
     svg += `<polygon points="${fillPoints}" fill="var(--accent)" opacity="0.08"/>`;
   } else {
@@ -623,13 +648,19 @@ export function renderWeight(s){
   }
   svg += `</svg>`;
 
-  const recentRows = recent.length ? recent.map(e => {
-    const d = new Date(e.date);
-    return `<div class="wt-entry">
-      <span class="d">${fmtDate(e.date)}</span>
-      <span class="w">${e.weight} ${unit}</span>
-    </div>`;
-  }).join("") : `<div class="empty" style="padding:20px">No entries yet.</div>`;
+  const recentRows = recent.length
+    ? recent.map(e => `
+      <div class="wt-entry">
+        <span class="d">${fmtDate(e.date)}</span>
+        <span class="w">${e.weight} ${unit}</span>
+      </div>
+    `).join("")
+    : renderEmptyState(
+        "scale",
+        "No entries yet",
+        "Log your weight regularly to see trends and stay on track toward your goal.",
+        `<button class="btn primary" data-action="wt-log">Log Weight</button>`
+      );
 
   return `
   <div class="grid-head">

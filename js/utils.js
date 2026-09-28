@@ -38,3 +38,12 @@ export function toast(msg){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
 }
+
+export function greeting(name) {
+  const h = new Date().getHours();
+  let time = "Good evening";
+  if (h < 12) time = "Good morning";
+  else if (h < 17) time = "Good afternoon";
+  const who = name && name.trim() ? `, ${name.trim()}` : "";
+  return `${time}${who}`;
+}
