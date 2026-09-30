@@ -794,11 +794,9 @@ function goToAdjacentTab(direction){
 
 function elementAllowsSwipe(el){
   if (!el || !el.closest) return false;
-  // Don't hijack typing / range / select interactions.
+  if (el.closest(".task")) return false;
   if (el.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']")) return false;
-  // Don't hijack modals, drawers or onboarding.
   if (el.closest(".drawer, .modal-root, .onb")) return false;
-  // Don't hijack horizontally-scrollable surfaces (e.g., the heat map).
   let cur = el;
   while (cur && cur !== document.body){
     const st = getComputedStyle(cur);
@@ -1129,18 +1127,20 @@ document.getElementById("tabbar").addEventListener("click", e => {
 
 async function boot(){
   loadState();
-  
-  // Show skeleton immediately if we have no local state, or if we are signed in
-  if (!getState() || !getState().user?.onboarded) {
+
+  const isReturningUser = getState() && getState().user?.onboarded;
+
+  // Only show skeleton for returning users — new users go straight to onboarding
+  if (isReturningUser) {
+    $("#app").hidden = false;
     renderSkeleton();
   }
-  
+
   await initAuth();
 
-  if (!getState() || !getState().user?.onboarded){
+  if (!isReturningUser){
     showOnboarding();
   } else {
-    $("#app").hidden = false;
     render();
   }
 }
@@ -1209,9 +1209,32 @@ let ptrStartY = 0, ptrActive = false;
 const spinner = document.getElementById("ptr-spinner");
 
 document.addEventListener("touchstart", e => {
-  if (window.scrollY === 0 && e.touches.length === 1) {
+  if (window.scrollY <= 0 && e.touches.length === 1 && spinner) {
     ptrStartY = e.touches[0].clientY;
     ptrActive = true;
+  }
+}, { passive: true });
+
+document.addEventListener("touchmove", e => {
+  if (!ptrActive || !spinner) return;
+  const dy = e.touches[0].clientY - ptrStartY;
+  if (dy > 0) {
+    e.preventDefault();
+    const pull = Math.min(dy * 0.5, 80);
+    spinner.style.top = `${-50 + pull}px`;
+    if (dy > 120) spinner.classList.add("active");
+  }
+}, { passive: false });
+
+document.addEventListener("touchend", e => {
+  if (!ptrActive || !spinner) return;
+  ptrActive = false;
+  const dy = e.changedTouches[0].clientY - ptrStartY;
+  spinner.style.top = "-50px";
+
+  if (dy > 120 && spinner.classList.contains("active")) {
+    spinner.classList.remove("active");
+    pushNow().then(() => toast("Synced to cloud"));
   }
 }, { passive: true });
 
